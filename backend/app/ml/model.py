@@ -24,7 +24,11 @@ class ModelBundle:
         if not self.bundle:
             raise RuntimeError("No trained model artifact is loaded")
         model = self.bundle["model"]
-        probability = model.predict_proba(vector.reshape(1, -1))[0, 1]
+        x = vector.reshape(1, -1)
+        scaler = self.bundle.get("scaler")
+        if scaler is not None:
+            x = scaler.transform(x)
+        probability = model.predict_proba(x)[0, 1]
         return float(probability)
 
     def metadata(self) -> dict[str, str]:
@@ -33,4 +37,5 @@ class ModelBundle:
         return {
             "name": self.bundle.get("model_name", "unknown"),
             "version": self.bundle.get("model_version", "unknown"),
+            "feature_schema_version": self.bundle.get("feature_schema_version", "unknown"),
         }
