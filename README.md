@@ -11,7 +11,7 @@ StegoShield is a cybersecurity application for detecting possible hidden informa
 - Explain which feature groups influenced the prediction.
 - Compare Logistic Regression, SVM and Random Forest.
 - Study payload sensitivity and robustness to common image transformations.
-- Provide a polished React/Vite security-analysis dashboard backed by FastAPI.
+- Provide a Next.js security-analysis dashboard backed by FastAPI.
 - Keep the architecture modular so additional steganographic algorithms or CNN models can be added later.
 
 ## Current scope
@@ -20,7 +20,7 @@ The first implementation is intentionally **LSB-focused**. It is not a universal
 
 ## Project status
 
-The ML core and its evaluation (Phases 1A and 1B) and the FastAPI inference backend (Phase 2, see [Backend API](#backend-api-phase-2)) are complete. The React dashboard is still a skeleton (Phase 3 is not started). All numbers below come from generated experiment reports (`data/reports/`, git-ignored); the complete write-up is produced locally by `scripts/finalize_phase1b_report.py` as `data/reports/phase1b_final_report.md`.
+The ML core and its evaluation (Phases 1A and 1B) and the FastAPI inference backend (Phase 2, see [Backend API](#backend-api-phase-2)) are complete. The Next.js dashboard (Phase 3, see [Frontend](#frontend-phase-3)) provides Analyze, Encode and Research pages on top of that API. All numbers below come from generated experiment reports (`data/reports/`, git-ignored); the complete write-up is produced locally by `scripts/finalize_phase1b_report.py` as `data/reports/phase1b_final_report.md`.
 
 ### Phase 1A — in-domain ML core (frozen)
 
@@ -131,10 +131,14 @@ Implemented: a body-size cap enforced before multipart parsing (declared and str
 
 Not provided: authentication, rate limiting and TLS (put the service behind a reverse proxy before exposing it; the design also asks for proxy-level size limits and timeouts), slow-client (slow-loris) protection, a per-request timeout, model reloading without a restart, or any guarantee about images outside the tested setting. Measured on a development machine: about 47 ms per 512x512 request and about 375 ms for the largest allowed image (2048x2048), with peak server memory of roughly 0.46 GB for one largest-size request and 0.83 GB for two concurrent ones (the default concurrency limit). These are single-machine measurements, not guarantees. The API is a research prototype interface and is not production-hardened.
 
+## Frontend (Phase 3)
+
+`frontend/` is a Next.js (App Router, TypeScript, Tailwind) application with **Analyze**, **Encode** and **Research** pages. It only calls the FastAPI endpoints above and contains no ML logic. The Research page shows aggregate results exported from the generated experiment reports (`python scripts/export_research_summary.py` writes `frontend/src/data/research-summary.json`), plus live `GET /api/v1/model-info`. Run it with the backend started as `CORS_ORIGINS=http://localhost:3000 uvicorn app.main:app`; see `frontend/README.md`.
+
 ## Quick architecture
 
 ```text
-React/Vite UI
+Next.js UI
      |
      v
 FastAPI API
