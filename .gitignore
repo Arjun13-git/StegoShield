@@ -25,10 +25,12 @@ data/raw/*
 data/processed/*
 data/models/*
 data/reports/*
+data/external/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 !data/models/.gitkeep
 !data/reports/.gitkeep
+!data/external/.gitkeep
 
 System-Design/
 CLAUDE.md
