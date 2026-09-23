@@ -55,6 +55,11 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--manifest-out", default="data/external/ALASKA2/pilot_manifest.csv")
     parser.add_argument("--report-out", default="data/reports/phase1b_pilot_preparation.json")
     parser.add_argument("--dataset-label", default="ALASKA2")
+    parser.add_argument(
+        "--require-complete",
+        action="store_true",
+        help="keep only sources that have every --variant-dirs variant (never emit partial groups)",
+    )
     return parser.parse_args()
 
 
@@ -125,14 +130,39 @@ def main() -> None:
 
     cover_source_ids = sorted({p.stem for p in cover_files})
 
-    # Duplicate check across cover files BEFORE selecting the pilot, so a
-    # duplicate can never silently end up representing two "independent"
-    # pilot sources.
+    if args.require_complete and variant_dirs:
+        def _has(vdir: Path, sid: str) -> bool:
+            return any((vdir / f"{sid}{ext}").exists() for ext in (".jpg", ".jpeg", ".png"))
+
+        complete = [sid for sid in cover_source_ids if all(_has(v, sid) for v in variant_dirs.values())]
+        dropped = sorted(set(cover_source_ids) - set(complete))
+        report["require_complete"] = {
+            "cover_sources_found": len(cover_source_ids),
+            "complete_sources_kept": len(complete),
+            "incomplete_sources_dropped": dropped,
+        }
+        cover_source_ids = complete
+        cover_files = [p for p in cover_files if p.stem in set(complete)]
+
+    # Duplicate check BEFORE selecting the pilot, so a duplicate can never
+    # silently end up representing two "independent" pilot sources. Covers
+    # are checked among themselves; all variants together are also checked
+    # so cross-variant / cross-source content duplicates are visible.
     duplicate_groups = find_duplicate_files(cover_files)
     report["duplicate_check"] = {
         "files_checked": len(cover_files),
         "duplicate_groups_found": len(duplicate_groups),
         "duplicate_groups": duplicate_groups,
+    }
+    selected_lookup = set(cover_source_ids)
+    all_files = list(cover_files)
+    for vdir in variant_dirs.values():
+        all_files += [p for p in vdir.iterdir() if p.is_file() and p.stem in selected_lookup]
+    all_groups = find_duplicate_files(all_files)
+    report["duplicate_check_all_variants"] = {
+        "files_checked": len(all_files),
+        "duplicate_groups_found": len(all_groups),
+        "duplicate_groups": all_groups,
     }
 
     selected_ids = select_pilot_sources(cover_source_ids, args.pilot_size, args.seed)

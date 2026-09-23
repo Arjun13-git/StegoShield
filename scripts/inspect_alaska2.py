@@ -38,6 +38,11 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--root", default="data/external")
     parser.add_argument("--report-out", default="data/reports/phase1b_dataset_inspection.json")
+    parser.add_argument(
+        "--full-validate",
+        action="store_true",
+        help="decode EVERY image and tabulate format/mode/size/JPEG structure/QF (slower; default samples only)",
+    )
     return parser.parse_args()
 
 
@@ -81,6 +86,47 @@ def _filename_pattern_summary(dir_summary: DirectorySummary) -> dict:
         "all_sampled_stems_numeric": all_numeric,
         "certainty": "VERIFIED (on sampled filenames only, not full directory)" if stems else "NOT_AVAILABLE",
     }
+
+
+def _full_validation(subdirectories: list[DirectorySummary]) -> dict:
+    """Decode every image; tabulate structure. Read-only."""
+    from collections import Counter
+
+    from PIL import JpegImagePlugin
+
+    out: dict = {"per_directory": {}, "certainty": "VERIFIED (every file decoded)"}
+    for d in subdirectories:
+        files = sorted(p for p in Path(d.path).iterdir() if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS)
+        formats, modes, sizes, n_tables, sampling = Counter(), Counter(), Counter(), Counter(), Counter()
+        qf_counts: Counter = Counter()
+        failures: list[dict] = []
+        for p in files:
+            try:
+                with Image.open(p) as img:
+                    img.load()
+                    formats[img.format] += 1
+                    modes[img.mode] += 1
+                    sizes[f"{img.size[0]}x{img.size[1]}"] += 1
+                    quant = getattr(img, "quantization", None) or {}
+                    n_tables[len(quant)] += 1
+                    if img.format == "JPEG":
+                        sampling[str(JpegImagePlugin.get_sampling(img))] += 1
+            except (UnidentifiedImageError, OSError) as exc:
+                failures.append({"file": p.name, "error": str(exc)[:120]})
+                continue
+            qf_counts[str(inspect_jpeg_quality(p).matched_known_qf)] += 1
+        out["per_directory"][d.name] = {
+            "files_checked": len(files),
+            "decode_failures": len(failures),
+            "failures": failures[:10],
+            "formats": dict(formats),
+            "modes": dict(modes),
+            "sizes": dict(sizes),
+            "jpeg_quantization_table_counts": {str(k): v for k, v in n_tables.items()},
+            "jpeg_chroma_subsampling_code_counts(0=4:4:4,1=4:2:2,2=4:2:0)": dict(sampling),
+            "qf_exact_match_counts(None=unmatched)": dict(qf_counts),
+        }
+    return out
 
 
 def main() -> None:
@@ -185,6 +231,9 @@ def main() -> None:
             "at metadata embedded in filenames beyond the numeric-stem check above."
         ),
     }
+
+    if args.full_validate:
+        report["full_validation"] = _full_validation(discovery.subdirectories)
 
     print(json.dumps(report, indent=2, default=str))
     _write_report(args.report_out, report)
