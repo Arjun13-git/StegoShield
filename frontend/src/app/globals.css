@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+/* Security-console palette: dark, restrained blue accent. Amber marks caution
+   and red is reserved for errors -- neither means "malicious". */
+@theme {
+  --color-canvas: #0a0e14;
+  --color-surface: #10161f;
+  --color-surface-2: #161e2a;
+  --color-line: #232e3d;
+  --color-line-strong: #34445a;
+  --color-fg: #e8edf3;
+  --color-muted: #9aa8ba;
+  --color-accent: #5aa2ff;
+  --color-accent-strong: #3d86ea;
+  --color-warn: #f2b84b;
+  --color-danger: #ff7a85;
+  --color-ok: #4cc9a0;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  background: var(--color-canvas);
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 35%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
