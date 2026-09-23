@@ -12,6 +12,10 @@ under `data/` (git-ignored) and contain only measured values.
 - `evaluate.py`: re-evaluate a saved artifact on any split and emit ROC-curve points.
 - `generate_payload_report.py`: evaluate one frozen artifact across payload levels.
 
+## Phase 2 — API support
+
+- `build_reference_scores.py`: builds `backend/app/resources/reference_scores_v1.json` (clean-image score percentiles from the validation split, per-feature reference statistics from the train split, flag rates from the test split for description only) using the frozen model for inference; the file is bound to the model's SHA-256.
+
 ## Phase 1B — external (ALASKA2) evaluation and robustness (frozen Phase 1A model)
 
 - `download_alaska2_pilot.py`: deterministic, resumable, rate-limit-aware selective download (requires Kaggle credentials and acceptance of the competition rules; never downloads the full corpus).
