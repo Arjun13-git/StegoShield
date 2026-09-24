@@ -6,9 +6,9 @@ score, indicator and metric comes from the API or from `src/data/research-summar
 ## Run
 
 ```bash
-# 1. backend (repository root, virtual environment active). The browser talks to the API directly,
-#    so the backend must allow the frontend's origin:
-cd backend && CORS_ORIGINS=http://localhost:3000 uvicorn app.main:app --port 8000
+# 1. backend (repository root, virtual environment active). The browser talks to the API directly;
+#    the backend allows http://localhost:3000 and http://127.0.0.1:3000 by default.
+cd backend && uvicorn app.main:app --host 127.0.0.1 --port 8000
 
 # 2. frontend
 cd frontend
@@ -17,7 +17,7 @@ npm install
 npm run dev                       # http://localhost:3000
 ```
 
-`NEXT_PUBLIC_API_BASE_URL` is embedded in the browser bundle: never put secrets in it.
+`NEXT_PUBLIC_API_BASE_URL` is embedded in the browser bundle: never put secrets in it. To serve the frontend from another origin, list it explicitly in the backend's `CORS_ORIGINS` (comma-separated; `*` is refused).
 
 ## Scripts
 

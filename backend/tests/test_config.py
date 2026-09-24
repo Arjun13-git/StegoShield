@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from app.core.config import FROZEN_MODEL_SHA256, REPO_ROOT, Settings
+from app.core.config import DEFAULT_CORS_ORIGINS, FROZEN_MODEL_SHA256, REPO_ROOT, Settings
 from app.main import create_app
 
 ENV_KEYS = ("MAX_UPLOAD_BYTES", "MIN_IMAGE_SIDE", "MAX_IMAGE_SIDE", "MAX_IMAGE_PIXELS", "MAX_MESSAGE_BYTES",
@@ -20,7 +20,7 @@ def test_defaults_are_conservative_and_pin_the_frozen_model() -> None:
     assert s.model_sha256 == FROZEN_MODEL_SHA256
     assert s.model_path == REPO_ROOT / "data" / "models" / "stegoshield_rf.joblib"
     assert s.max_image_pixels == 2048 * 2048 and s.max_concurrent_analyses == 2
-    assert s.cors_origins == ("http://localhost:5173",)
+    assert s.cors_origins == ("http://localhost:3000", "http://127.0.0.1:3000")
     assert s.max_request_body_bytes > s.max_upload_bytes
 
 
@@ -57,3 +57,16 @@ def test_app_is_not_in_debug_mode_and_docs_can_be_disabled(monkeypatch) -> None:
     monkeypatch.setenv("ENABLE_DOCS", "false")
     app = create_app(Settings.from_env())
     assert app.docs_url is None and app.openapi_url is None
+
+
+def test_default_cors_origins_cover_the_next_dev_server_in_both_spellings_and_are_explicit() -> None:
+    for settings in (Settings(), Settings.from_env()):
+        assert "http://localhost:3000" in settings.cors_origins
+        assert "http://127.0.0.1:3000" in settings.cors_origins
+        assert "*" not in settings.cors_origins
+    assert Settings().cors_origins == DEFAULT_CORS_ORIGINS
+
+
+def test_env_example_documents_the_same_cors_defaults() -> None:
+    line = next(l for l in (REPO_ROOT / ".env.example").read_text().splitlines() if l.startswith("CORS_ORIGINS="))
+    assert tuple(o.strip() for o in line.split("=", 1)[1].split(",")) == DEFAULT_CORS_ORIGINS

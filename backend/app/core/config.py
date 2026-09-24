@@ -24,6 +24,10 @@ EXPECTED_FEATURE_SCHEMA_VERSION = "v1"
 DEFAULT_MODEL_PATH = REPO_ROOT / "data" / "models" / "stegoshield_rf.joblib"
 DEFAULT_REFERENCE_PATH = Path(__file__).resolve().parents[1] / "resources" / "reference_scores_v1.json"
 
+# Explicit origins of the Next.js dev server (`npm run dev`, port 3000). The browser sends whichever
+# host the user typed, so both spellings are listed. Never a wildcard; override with CORS_ORIGINS.
+DEFAULT_CORS_ORIGINS = ("http://localhost:3000", "http://127.0.0.1:3000")
+
 
 def _env_int(name: str, default: int) -> int:
     raw = os.getenv(name)
@@ -73,7 +77,7 @@ class Settings:
     reference_path: Path = DEFAULT_REFERENCE_PATH
 
     # --- http ----------------------------------------------------------------
-    cors_origins: tuple[str, ...] = field(default_factory=lambda: ("http://localhost:5173",))
+    cors_origins: tuple[str, ...] = DEFAULT_CORS_ORIGINS
     enable_docs: bool = True
 
     @property
@@ -92,7 +96,7 @@ class Settings:
             expected = model_sha.strip().lower()
 
         origins = os.getenv("CORS_ORIGINS")
-        cors = tuple(o.strip() for o in origins.split(",") if o.strip()) if origins else ("http://localhost:5173",)
+        cors = tuple(o.strip() for o in origins.split(",") if o.strip()) if origins else DEFAULT_CORS_ORIGINS
         if "*" in cors:
             raise ValueError("CORS_ORIGINS must list explicit origins; '*' is not allowed")
 

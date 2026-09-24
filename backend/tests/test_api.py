@@ -229,6 +229,45 @@ def test_cors_is_restricted_to_configured_origins(tmp_path) -> None:
         assert "access-control-allow-origin" not in bad.headers
 
 
+def test_default_cors_accepts_the_next_dev_server_and_rejects_others(tmp_path) -> None:
+    """Regression: the default origins must match the real frontend (Next.js on port 3000)."""
+    path = tmp_path / "m.joblib"
+    sha = write_tiny_bundle(path)
+    with TestClient(create_app(make_settings(model_path=path, model_sha256=sha))) as c:  # default cors_origins
+        for origin in ("http://localhost:3000", "http://127.0.0.1:3000"):
+            pre = c.options(
+                "/api/v1/encode",
+                headers={"Origin": origin, "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "content-type"},
+            )
+            assert pre.status_code == 200
+            assert pre.headers["access-control-allow-origin"] == origin
+            assert "POST" in pre.headers["access-control-allow-methods"]
+            assert "access-control-allow-credentials" not in pre.headers
+            simple = c.get("/ready", headers={"Origin": origin})
+            assert simple.headers["access-control-allow-origin"] == origin
+
+        for origin in ("http://evil.example", "http://localhost:3001", "http://localhost:5173", "null"):
+            pre = c.options("/api/v1/encode", headers={"Origin": origin, "Access-Control-Request-Method": "POST"})
+            assert pre.status_code == 400
+            assert "access-control-allow-origin" not in pre.headers
+            assert "access-control-allow-origin" not in c.get("/ready", headers={"Origin": origin}).headers
+
+
+def test_encode_response_headers_are_exposed_to_the_browser(tmp_path) -> None:
+    path = tmp_path / "m.joblib"
+    sha = write_tiny_bundle(path)
+    with TestClient(create_app(make_settings(model_path=path, model_sha256=sha))) as c:
+        resp = c.post(
+            "/api/v1/encode",
+            files={"file": ("c.png", png_bytes(noise((64, 64, 3), 3)), "image/png")},
+            data={"message": "hi"},
+            headers={"Origin": "http://localhost:3000"},
+        )
+        assert resp.status_code == 200
+        exposed = resp.headers["access-control-expose-headers"].lower()
+        assert "x-embedded-bytes" in exposed and "x-capacity-bytes" in exposed
+
+
 def test_inconclusive_when_reference_does_not_match_model(tmp_path) -> None:
     """A model other than the one the reference was built for must not get risk levels."""
     path = tmp_path / "m.joblib"
